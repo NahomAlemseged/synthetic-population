@@ -15,7 +15,7 @@ This system generates realistic synthetic patient populations, medical diagnoses
 - De‑identified data still contains real patient records and may be vulnerable to re‑identification
 - Synthetic data:
   - Contains **no real individuals**
-  - Preserves **statistical structure and relationships**
+  - Preserves **underlying statistical structure and relationships**
   - Enables unrestricted sharing for research and development
 - Especially valuable for healthcare analytics, ML model training, and policy research
 
@@ -23,8 +23,8 @@ This system generates realistic synthetic patient populations, medical diagnoses
 
 ## Data Source
 
-- **THCIC Inpatient Discharge Data (2023)**
-- Covers hospital inpatient encounters in Texas
+- **THCIC Discharge Data (2023)**
+- Covers hospital encounters in Texas (Emergency, inpatient, and outpatient)
 - Includes demographics, diagnoses, severity indicators, and cost information
 - Raw data is **not included** in this repository due to privacy restrictions
 
@@ -42,7 +42,7 @@ This system generates realistic synthetic patient populations, medical diagnoses
 
 - **CTGAN (Conditional Tabular GAN)** is used to generate high‑dimensional medical diagnosis data
 - Captures complex correlations among diagnoses and rare conditions
-- Enables realistic comorbidity patterns without copying real patient records
+
 
 ### 3. Comorbidity and Dependency Analysis
 
@@ -54,13 +54,6 @@ To validate realism and structure:
   - Captures probabilistic transitions and dependencies between diagnoses
 - Used to confirm that synthetic comorbidity structures resemble real data behavior
 
-### 4. Additional Outputs
-
-The system also generates and evaluates:
-
-- **Severity indicators**
-- **Hospital cost distributions**
-- **State‑level summary statistics for Texas**
 
 ---
 
@@ -68,7 +61,7 @@ The system also generates and evaluates:
 
 Synthetic data quality is evaluated using:
 
-- Distributional similarity checks
+- Distributional similarity checks (JS similarity)
 - Association testing (e.g., contingency tables, mutual information)
 - Comorbidity pattern comparison between real and synthetic datasets
 
@@ -78,7 +71,7 @@ These steps ensure high analytical utility while maintaining privacy.
 
 ## Project Features
 
-- Privacy‑preserving synthetic inpatient data
+- Privacy‑preserving synthetic data
 - Realistic demographic population synthesis
 - High‑fidelity diagnosis and comorbidity modeling
 - Severity and cost estimation for Texas
@@ -86,33 +79,6 @@ These steps ensure high analytical utility while maintaining privacy.
 
 ---
 
-## Technologies Used
-
-- **Python 3**
-- **Pandas / NumPy**
-- **CTGAN**
-- **Iterative Proportional Fitting (IPF)**
-- **Apriori Algorithm**
-- **Markov Models**
-- **Matplotlib / Seaborn**
-
----
-
-## Example Folder Structure
-
-### ├── src/  Core generation and analysis code
-### │ ├── demographics/  IPF population synthesis
-### │ ├── models/  CTGAN models
-### │ ├── validate/  Similarity and comorbidity analysis
-### │
-### ├── notebooks/  Exploratory and validation notebooks
-### ├── models/  Trained CTGAN artifacts (optional)
-### ├── output/  Synthetic datasets and metrics
-### ├── tests/  Unit and validation tests
-### ├── README.md
-
-
----
 
 ## Use Cases
 
