@@ -23,4 +23,4 @@ Thumbs.db
 *.pkl
 *.h5
 *.joblib
-src/validate/geo_files/*.shp
+src/validate/geo_files/*
