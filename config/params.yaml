@@ -1,0 +1,66 @@
+etl:
+  input: 
+    # - "data/raw/emergency/"
+    - /mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/raw/emergency/
+    # - /mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/raw/inpatient/
+    # - /mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/raw/outpatient/
+
+  output: 
+    # - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/bronze/"
+    - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/transformed"
+
+database:
+  hostname: 'localhost'
+  port: 5432
+  database: 'postgres'
+  dbname: "thcic_db"
+  username: "postgres"
+  password: "Nazrawi123!"
+
+# database:
+#   type: sqlite
+#   dbname: 'thcic_db'
+
+
+ingestion:
+  # input: "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/bronze/"
+  input: 
+    - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/transformed/df_base_1_emergency/"
+    - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/transformed/df_grouper_emergency/"
+  output: "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/gold/"
+  test_size: 0.2
+  random_state: 42
+
+generate:
+  input: "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/gold/train.csv"
+  output: "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/gold/generate/"
+
+validate:
+  input: 
+    - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/gold/test.csv"
+  output:
+    - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/gold/genrated/"
+    
+
+train:
+  input: 
+    # - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/gold/generate/synthetic_emergency.csv"
+    - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/gold/generate/synthetic_emergency.csv"
+
+  output: 
+    - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/model/"
+
+evaluate:
+  input:
+    - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/gold/generate/synthetic_emergency.csv"
+    - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/gold/test.csv"
+    - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/data/gold/train.csv"
+    - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/model/model.pkl"
+
+  output:
+    - "/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/assets/"
+
+
+
+
+

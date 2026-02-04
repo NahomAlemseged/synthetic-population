@@ -1,0 +1,22 @@
+artifact_path: /mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/src/mlruns/1/models/m-311556545f96429490e137439c330c3f/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.10.12
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.7.1
+mlflow_version: 3.8.1
+model_id: m-311556545f96429490e137439c330c3f
+model_size_bytes: 34958914
+model_uuid: m-311556545f96429490e137439c330c3f
+prompts: null
+run_id: 55384f3faad2420da7e1ff69f344edf1
+utc_time_created: '2026-01-27 03:08:04.562006'
