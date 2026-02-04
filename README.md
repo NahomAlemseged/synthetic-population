@@ -100,16 +100,16 @@ These steps ensure high analytical utility while maintaining privacy.
 
 ## Example Folder Structure
 
-# ├── src/  Core generation and analysis code
-# │ ├── demographics/  IPF population synthesis
-# │ ├── models/  CTGAN models
-# │ ├── validate/  Similarity and comorbidity analysis
-# │
-# ├── notebooks/  Exploratory and validation notebooks
-# ├── models/  Trained CTGAN artifacts (optional)
-# ├── output/  Synthetic datasets and metrics
-# ├── tests/  Unit and validation tests
-# ├── README.md
+### ├── src/  Core generation and analysis code
+### │ ├── demographics/  IPF population synthesis
+### │ ├── models/  CTGAN models
+### │ ├── validate/  Similarity and comorbidity analysis
+### │
+### ├── notebooks/  Exploratory and validation notebooks
+### ├── models/  Trained CTGAN artifacts (optional)
+### ├── output/  Synthetic datasets and metrics
+### ├── tests/  Unit and validation tests
+### ├── README.md
 
 
 ---
