@@ -1,0 +1,18 @@
+numpy
+pandas
+matplotlib
+seaborn
+scipy
+sqlalchemy
+psycopg2-binary
+dask
+pyYAML
+SCikit-learn
+XGBoost
+pyarrow
+torch
+ctgan
+mlflow
+
+
+# -e .
