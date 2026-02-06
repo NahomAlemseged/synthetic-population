@@ -59,29 +59,6 @@ class ETL:
 
         return dfs
 
-    # def load(self, dfs):
-    #     try:
-    #         for dataset_type, ddf in dfs.items():
-    #             out_dir = Path(self.output_path[0]) / dataset_type
-    #             out_dir.mkdir(parents=True, exist_ok=True)
-
-    #             parquet_file = out_dir / f"{dataset_type}.csv"
-    #             print(f"Saving → {parquet_file}")
-
-    #             ddf.to_parquet(
-    #                 parquet_file,
-    #                 engine="pyarrow",
-    #                 overwrite=True                    write_index=False
-    #             )
-
-    #             print(f"✅ Saved {dataset_type} → {parquet_file}")
-    #         print(f"Successfully loaded datasets to {self.output_path}")
-    #     except Exception as e:
-    #         print(f"❌ Error in load: {e}")
-    #     finally:
-    #         print("Exiting Loading stage")
-# from pathlib import Path
-
     def load(self, dfs):
         try:
             for dataset_type, ddf in dfs.items():
