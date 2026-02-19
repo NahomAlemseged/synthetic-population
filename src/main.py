@@ -18,7 +18,7 @@ def extract():
     print("============================================")
 
     subprocess.run(
-        ["bash", f"{BASE_DIR}/data/raw/extract_load.sh"],
+        ["bash", f"/content/drive/MyDrive/data_THCIC/extract_load.sh"],/extract_load.sh"],
         check=True
     )
 
