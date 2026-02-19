@@ -67,3 +67,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+# python -m src.main --n_samples 100000 \--epochs 10 \--num_processes $(nproc) --sample_rows 100000
+
