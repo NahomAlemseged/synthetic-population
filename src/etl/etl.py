@@ -1,9 +1,22 @@
-import sys
 import os
 from pathlib import Path
 import yaml
-import dask.dataframe as dd
-from dask.distributed import Client, LocalCluster
+import torch
+
+# --------------------------
+# Detect GPU
+# --------------------------
+GPU_AVAILABLE = torch.cuda.is_available()
+
+if GPU_AVAILABLE:
+    print("🚀 GPU detected — using RAPIDS (dask-cudf)")
+    import dask_cudf as dd
+    from dask_cuda import LocalCUDACluster
+    from dask.distributed import Client
+else:
+    print("💻 No GPU detected — using Dask CPU")
+    import dask.dataframe as dd
+    from dask.distributed import Client, LocalCluster
 
 # --------------------------
 # Load config
@@ -11,99 +24,102 @@ from dask.distributed import Client, LocalCluster
 with open('/content/synthetic-population_/config/params.yaml') as f:
     params_ = yaml.safe_load(f)
 
-# --------------------------
-# ETL Class (Parallelized)
-# --------------------------
-class ETL:
-    def __init__(self):
-        self.input_path = params_['etl']['input']  # list of folders
-        self.output_path = params_['etl']['output']  # list or str path
 
-        # Start a Dask cluster for parallel processing
-        self.cluster = LocalCluster(n_workers=os.cpu_count(), threads_per_worker=1)
+class ETL:
+
+    def __init__(self):
+
+        self.input_path = params_['etl']['input']
+        self.output_path = params_['etl']['output']
+
+        if GPU_AVAILABLE:
+            # 🔥 One worker per GPU
+            self.cluster = LocalCUDACluster()
+        else:
+            # 🔥 Controlled CPU parallelism
+            n_workers = min(8, os.cpu_count())
+            self.cluster = LocalCluster(
+                n_workers=n_workers,
+                threads_per_worker=2,
+                memory_limit="auto"
+            )
+
         self.client = Client(self.cluster)
-        print(f"✅ Dask cluster started with {os.cpu_count()} workers")
+        print("✅ Dask cluster started")
 
     def extract_transform(self):
-        """
-        Extract and transform all files in parallel using Dask
-        """
+
         dfs = {}
 
-        for i in range(len(self.input_path)):
-            dir_path = Path(self.input_path[i])
+        for dir_path in self.input_path:
+            dir_path = Path(dir_path)
 
-            # Find files
-            file_grouper = [str(p) for p in dir_path.rglob("*.txt") if "IP_ED_GROUPER_1q2023_tab.txt" in p.name]
-            file_base = [str(p) for p in dir_path.rglob("*.txt") if "IP_ED_BASE_DATA_1_1q2023_" in p.name]
+            grouper_pattern = str(dir_path / "*IP_ED_GROUPER_1q2023_tab.txt")
+            base_pattern = str(dir_path / "*IP_ED_BASE_DATA_1_1q2023_*.txt")
 
-            # Grouper files
-            if file_grouper:
-                df_grouper = dd.concat(
-                    [dd.read_csv(fp, sep="\t", dtype=str) for fp in file_grouper],
-                    ignore_index=True, axis=0, interleave_partitions=True
+            # --------------------------
+            # Grouper
+            # --------------------------
+            try:
+                df_grouper = dd.read_csv(
+                    grouper_pattern,
+                    sep="\t",
+                    dtype=str,
+                    blocksize="128MB"
                 )
-                df_grouper['TYPE'] = dir_path.name
+                df_grouper["TYPE"] = dir_path.name
                 dfs[f"df_grouper_{dir_path.name}"] = df_grouper
-                print(f"..df_grouper_{dir_path.name} loaded and merged..")
-            else:
-                print(f"..No grouper files found in {dir_path.name}, skipping..")
+                print(f"✅ Loaded grouper {dir_path.name}")
+            except Exception:
+                print(f"..No grouper files in {dir_path.name}")
 
-            # Base files
-            if file_base:
-                df_base = dd.concat(
-                    [dd.read_csv(fp, sep="\t", dtype=str) for fp in file_base],
-                    ignore_index=True, axis=0, interleave_partitions=True
+            # --------------------------
+            # Base
+            # --------------------------
+            try:
+                df_base = dd.read_csv(
+                    base_pattern,
+                    sep="\t",
+                    dtype=str,
+                    blocksize="128MB"
                 )
-                df_base['TYPE'] = dir_path.name
-                dfs[f"df_base_1_{dir_path.name}"] = df_base
-                print(f"..df_base_1_{dir_path.name} loaded and merged..")
-            else:
-                print(f"..No base files found in {dir_path.name}, skipping..")
+                df_base["TYPE"] = dir_path.name
+                dfs[f"df_base_{dir_path.name}"] = df_base
+                print(f"✅ Loaded base {dir_path.name}")
+            except Exception:
+                print(f"..No base files in {dir_path.name}")
 
         return dfs
 
     def load(self, dfs):
-        """
-        Save Dask DataFrames in parallel to CSVs
-        """
-        try:
-            for dataset_type, ddf in dfs.items():
-                out_dir = Path(self.output_path[0]) / dataset_type
-                out_dir.mkdir(parents=True, exist_ok=True)
 
-                csv_file = out_dir / f"{dataset_type}.csv"
-                print(f"Saving → {csv_file}")
+        for dataset_type, ddf in dfs.items():
 
-                # Use Dask to save in parallel (single CSV per dataset)
-                ddf.repartition(npartitions=os.cpu_count()).to_csv(
-                    csv_file,
-                    index=False,
-                    single_file=True
-                )
-                print(f"✅ Saved {dataset_type} → {csv_file}")
+            out_dir = Path(self.output_path[0]) / dataset_type
+            out_dir.mkdir(parents=True, exist_ok=True)
 
-            print(f"Successfully saved all datasets to {self.output_path}")
+            print(f"💾 Saving {dataset_type} → Parquet")
 
-        except Exception as e:
-            print(f"❌ Error in load: {e}")
+            # 🔥 Write parallel parquet (fastest + scalable)
+            ddf.to_parquet(
+                out_dir,
+                write_index=False
+            )
 
-        finally:
-            print("Exiting Loading stage")
-            # Shutdown Dask client
-            self.client.close()
-            self.cluster.close()
-            print("✅ Dask cluster closed")
+            print(f"✅ Saved {dataset_type}")
+
+        print("✅ All datasets saved")
+
+        self.client.close()
+        self.cluster.close()
+        print("✅ Cluster closed")
 
 
-# --------------------------
-# Run ETL
-# --------------------------
 def main():
     etl = ETL()
     extracted = etl.extract_transform()
     etl.load(extracted)
-    print("✅ ETL finished. All datasets merged and saved as CSV.")
+    print("🎯 ETL finished successfully")
 
 
 if __name__ == "__main__":
