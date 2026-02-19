@@ -18,7 +18,7 @@ from sklearn.linear_model import LogisticRegression
 
 
 # === Load config ===
-CONFIG_PATH = Path("/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/config/params.yaml")
+CONFIG_PATH = Path("/content/synthetic-population_/config/params.yaml")
 with open(CONFIG_PATH) as file:
     params = yaml.safe_load(file)
 
