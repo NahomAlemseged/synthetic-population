@@ -50,7 +50,9 @@ class Ingestion:
                     print(f"...shape of grouper data :{df_grouper.shape}")
 
                     df_merged = df_base.merge(df_grouper, on="RECORD_ID")
-
+                    print(f"...shape of merged data :{df_merged.shape}")
+                    df_merged.drop(columns=["RECORD_ID"], inplace=True)
+        
                     # df_merged.dropna(inplace=True)
                     if first_file:
                         df_merged.to_csv(output_path, index=False, mode='w')
