@@ -54,8 +54,8 @@ class ETL:
         for dir_path in self.input_path:
             dir_path = Path(dir_path)
 
-            grouper_pattern = str(dir_path / "*IP_ED_GROUPER_1q2023_tab.txt")
-            base_pattern = str(dir_path / "*IP_ED_BASE_DATA_1_1q2023_*.txt")
+            grouper_pattern = str(dir_path / "*GROUPER*.txt")
+            base_pattern = str(dir_path / "*BASE_DATA_1_*.txt")
 
             # --------------------------
             # Grouper
