@@ -5,6 +5,7 @@ from pathlib import Path
 import yaml
 import dask.dataframe as dd
 from sqlalchemy import create_engine
+from dask.distributed import Client, LocalCluster
 
 # --------------------------
 # Load config
@@ -20,6 +21,11 @@ class ETL:
     def __init__(self):
         self.input_path = params_['etl']['input']  # list of folders
         self.output_path = params_['etl']['output']  # list or str path
+
+    # Start a Dask cluster for parallel processing
+        self.cluster = LocalCluster(n_workers=os.cpu_count(), threads_per_worker=1)
+        self.client = Client(self.cluster)
+        print(f"✅ Dask cluster started with {os.cpu_count()} workers")
 
     def extract_transform(self):
         dfs = {}
