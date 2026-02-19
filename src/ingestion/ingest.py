@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-CONFIG_PATH = Path("/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/config/params.yaml")
+CONFIG_PATH = Path("/content/synthetic-population_/config/params.yaml")
 
 # Load YAML
 with open(CONFIG_PATH, "r") as f:
