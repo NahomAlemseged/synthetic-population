@@ -2,8 +2,8 @@ etl:
   input: 
     # - "data/raw/emergency/"
     - /content/drive/MyDrive/data_THCIC/emergency/
-    # - /content/synthetic-population_/data/raw/inpatient/
-    # - /content/synthetic-population_/data/raw/outpatient/
+    - /content/synthetic-population_/data/raw/inpatient/
+    - /content/synthetic-population_/data/raw/outpatient/
 
   output: 
     # - "/content/synthetic-population_/data/bronze/"
