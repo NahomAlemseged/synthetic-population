@@ -12,7 +12,7 @@ from scipy.spatial.distance import jensenshannon
 # ======================================================
 # Load config
 # ======================================================
-CONFIG_PATH = Path("/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/config/params.yaml")
+CONFIG_PATH = Path("/content/synthetic-population_/synthetic-population/config/params.yaml")
 
 with open(CONFIG_PATH) as file:
     params_ = yaml.safe_load(file)
