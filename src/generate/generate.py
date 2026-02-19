@@ -11,11 +11,14 @@ from ctgan import CTGAN
 # --------------------------
 # Command line arguments
 # --------------------------
-parser = argparse.ArgumentParser(description="Synthetic population generation (A100 optimized)")
+parser = argparse.ArgumentParser(description="Synthetic population generation with CTGAN")
 parser.add_argument("--n_samples", type=int, required=True)
-parser.add_argument("--epochs", type=int, default=10)
+parser.add_argument("--epochs", type=int, default=5)
 parser.add_argument("--sample_rows", type=int, default=None)
+parser.add_argument("--num_processes", type=int, default=None, help="Number of CPU threads for parallelism")  # <- ADD THIS
 args = parser.parse_args()
+
+num_processes = args.num_processes if args.num_processes else os.cpu_count()
 
 n_samples = args.n_samples
 epochs = args.epochs
