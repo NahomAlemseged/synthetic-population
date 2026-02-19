@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 # --------------------------
 # Load config
 # --------------------------
-with open('/mnt/c/Users/nahomw/Desktop/from_mac/nahomworku/Desktop/uthealth/gra_project/synthetic-population/config/params.yaml') as f:
+with open('/content/synthetic-population_/config/params.yaml') as f:
     params_ = yaml.safe_load(f)
 
 
