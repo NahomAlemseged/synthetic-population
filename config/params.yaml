@@ -1,14 +1,18 @@
+# ==============================
+# ETL / Transform
+# ==============================
 etl:
   input: 
-    # - "data/raw/emergency/"
-    - /content/drive/MyDrive/data_THCIC/emergency/
-    - /content/drive/MyDrive/data_THCIC/inpatient/
-    - /content/drive/MyDrive/data_THCIC/outpatient/
+    - "/content/drive/MyDrive/data_THCIC/emergency/"
+    - "/content/drive/MyDrive/data_THCIC/inpatient/"
+    - "/content/drive/MyDrive/data_THCIC/outpatient/"
 
   output: 
-    # - "/content/synthetic-population_/data/bronze/"
-    - "/content/synthetic-population_/data/transformed/"
+    - "/content/drive/MyDrive/data_THCIC/transformed/"  # ETL outputs go to Drive
 
+# ==============================
+# Database Config (Optional)
+# ==============================
 database:
   hostname: 'localhost'
   port: 5432
@@ -17,54 +21,48 @@ database:
   username: "postgres"
   password: "Nazrawi123!"
 
-# database:
-#   type: sqlite
-#   dbname: 'thcic_db'
-
-
+# ==============================
+# Ingestion
+# ==============================
 ingestion:
-  input:
-    - "/content/synthetic-population_/data/transformed/df_base_1_emergency/"
-    - "/content/synthetic-population_/data/transformed/df_grouper_emergency/"
-    - "/content/synthetic-population_/data/transformed/df_base_1_inpatient/"
-    - "/content/synthetic-population_/data/transformed/df_grouper_inpatient/"
-    - "/content/synthetic-population_/data/transformed/df_base_1_outpatient/"
-    - "/content/synthetic-population_/data/transformed/df_grouper_outpatient/"
-  output: "/content/synthetic-population_/data/gold/"
+  input_dir: "/content/drive/MyDrive/data_THCIC/transformed/"  # all df_base_1_* / df_grouper_* folders
+  output: "/content/drive/MyDrive/data_THCIC/gold/"           # final CSV, train/test
   test_size: 0.2
   random_state: 42
 
-
+# ==============================
+# Data Generation
+# ==============================
 generate:
-  input: "/content/synthetic-population_/data/gold/train.csv"
-  output: "/content/synthetic-population_/data/gold/generate/"
+  input: "/content/drive/MyDrive/data_THCIC/gold/train.csv"
+  output: "/content/drive/MyDrive/data_THCIC/gold/generated/"  # synthetic data on Drive
 
+# ==============================
+# Validation
+# ==============================
 validate:
   input: 
-    - "/content/synthetic-population_/data/gold/test.csv"
+    - "/content/drive/MyDrive/data_THCIC/gold/test.csv"
   output:
-    - "/content/synthetic-population_/data/gold/genrated/"
-    
+    - "/content/drive/MyDrive/data_THCIC/gold/generated/"
 
+# ==============================
+# Model Training
+# ==============================
 train:
   input: 
-    # - "/content/synthetic-population_/data/gold/generate/synthetic_emergency.csv"
-    - "/content/synthetic-population_/data/gold/generate/synthetic_emergency.csv"
-
+    - "/content/drive/MyDrive/data_THCIC/gold/generated/synthetic_emergency.csv"
   output: 
-    - "/content/synthetic-population_/model/"
+    - "synthetic-population_/model/"   # Models stay in repo
 
+# ==============================
+# Model Evaluation
+# ==============================
 evaluate:
   input:
-    - "/content/synthetic-population_/data/gold/generate/synthetic_emergency.csv"
-    - "/content/synthetic-population_/data/gold/test.csv"
-    - "/content/synthetic-population_/data/gold/train.csv"
-    - "/content/synthetic-population_/model/model.pkl"
-
+    - "/content/drive/MyDrive/data_THCIC/gold/generated/synthetic_emergency.csv"
+    - "/content/drive/MyDrive/data_THCIC/gold/test.csv"
+    - "/content/drive/MyDrive/data_THCIC/gold/train.csv"
+    - "synthetic-population_/model/model.pkl"  # Model from repo
   output:
-    - "/content/synthetic-population_/assets/"
-
-
-
-
-
+    - "synthetic-population_/assets/"          # Evaluation outputs stay in repo
