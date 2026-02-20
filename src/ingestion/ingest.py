@@ -16,6 +16,16 @@ output_path = Path(params_["ingestion"]["output"])
 test_size = params_["ingestion"].get("test_size", 0.2)
 random_state = params_["ingestion"].get("random_state", 42)
 
+# Columns to keep
+BASE_COLUMNS = [
+    'RECORD_ID', 'DISCHARGE', 'TYPE_OF_ADMISSION', 'SOURCE_OF_ADMISSION',
+    'PAT_ZIP', 'PAT_COUNTY', 'PUBLIC_HEALTH_REGION', 'PAT_STATUS',
+    'SEX_CODE', 'RACE', 'ETHNICITY', 'ADMIT_WEEKDAY', 'LENGTH_OF_STAY',
+    'PAT_AGE', 'FIRST_PAYMENT_SRC'
+]
+
+GROUPER_COLUMNS = ['RECORD_ID', 'APR_MDC']
+
 # ==============================
 # Ingestion Class
 # ==============================
@@ -32,41 +42,37 @@ class Ingestion:
         output_file = self.output_path / "final_data.csv"
         first_file = True
 
-        # Automatically find base/grouper pairs
+        # Find base/grouper pairs
         base_folders = sorted(self.input_dir.glob("df_base_1_*"))
-        grouper_folders = sorted(self.input_dir.glob("df_grouper_*"))
-
-        # Ensure matching datasets
         for base_folder in base_folders:
-            name_suffix = base_folder.name.replace("df_base_1_", "")
-            matching_grouper = self.input_dir / f"df_grouper_{name_suffix}"
+            suffix = base_folder.name.replace("df_base_1_", "")
+            grouper_folder = self.input_dir / f"df_grouper_{suffix}"
 
-            if not matching_grouper.exists():
-                print(f"⚠️ No grouper folder found for {base_folder.name}, skipping")
+            if not grouper_folder.exists():
+                print(f"⚠️ No matching grouper folder for {base_folder.name}, skipping")
                 continue
 
             # Merge all files in the folder
             base_files = sorted(base_folder.glob("*.parquet"))
-            grouper_files = sorted(matching_grouper.glob("*.parquet"))
+            grouper_files = sorted(grouper_folder.glob("*.parquet"))
 
             for bf, gf in zip(base_files, grouper_files):
                 print(f"\n📂 Processing {bf.name} + {gf.name}")
+
+                # --- Read BASE ---
                 df_base = pd.read_parquet(bf)
-                df_base = pd.read_csv(bf, dtype=str, usecols=[
-                    'RECORD_ID', 'DISCHARGE', 'TYPE_OF_ADMISSION', 'SOURCE_OF_ADMISSION',
-                    'PAT_ZIP', 'PAT_COUNTY', 'PUBLIC_HEALTH_REGION', 'PAT_STATUS',
-                    'SEX_CODE', 'RACE', 'ETHNICITY', 'ADMIT_WEEKDAY', 'LENGTH_OF_STAY',
-                    'PAT_AGE', 'FIRST_PAYMENT_SRC'
-                ])
-                df_grouper = pd.read_csv(gf, dtype=str, usecols=['RECORD_ID','APR_MDC'])
-                    # df_grouper.dropna(inplace=True)
-                print(f"...shape of grouper data :{df_grouper.shape}")
+                df_base = df_base[BASE_COLUMNS]
 
+                # --- Read GROUPER ---
+                df_grouper = pd.read_parquet(gf)
+                df_grouper = df_grouper[GROUPER_COLUMNS]
+
+                # --- Merge ---
                 df_merged = df_base.merge(df_grouper, on="RECORD_ID", how="inner")
-                print(f"...shape of merged data :{df_merged.shape}")
                 df_merged.drop(columns=["RECORD_ID"], inplace=True)
-                print(f"Merged shape: {df_merged.shape}")
+                print(f"✅ Merged shape: {df_merged.shape}")
 
+                # --- Save incrementally ---
                 if first_file:
                     df_merged.to_csv(output_file, index=False, mode='w')
                     first_file = False
@@ -74,14 +80,14 @@ class Ingestion:
                     df_merged.to_csv(output_file, index=False, mode='a', header=False)
 
         if first_file:
-            raise FileNotFoundError("❌ No data was merged. final_data.csv was not created.")
+            raise FileNotFoundError("❌ No data merged. final_data.csv not created.")
 
         print(f"\n✅ Data merged successfully → {output_file}")
         return output_file
 
     def save_splits(self, csv_file):
         """
-        Split into train/test
+        Split into train/test CSVs
         """
         print("\n✂️ Splitting train/test...")
         df = pd.read_csv(csv_file)
@@ -110,3 +116,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
