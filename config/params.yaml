@@ -2,8 +2,8 @@ etl:
   input: 
     # - "data/raw/emergency/"
     - /content/drive/MyDrive/data_THCIC/emergency/
-    - /content/synthetic-population_/data/raw/inpatient/
-    - /content/synthetic-population_/data/raw/outpatient/
+    - /content/drive/MyDrive/data_THCIC/inpatient/
+    - /content/drive/MyDrive/data_THCIC/outpatient/
 
   output: 
     # - "/content/synthetic-population_/data/bronze/"
@@ -23,13 +23,17 @@ database:
 
 
 ingestion:
-  # input: "/content/synthetic-population_/data/bronze/"
-  input: 
+  input:
     - "/content/synthetic-population_/data/transformed/df_base_1_emergency/"
     - "/content/synthetic-population_/data/transformed/df_grouper_emergency/"
+    - "/content/synthetic-population_/data/transformed/df_base_1_inpatient/"
+    - "/content/synthetic-population_/data/transformed/df_grouper_inpatient/"
+    - "/content/synthetic-population_/data/transformed/df_base_1_outpatient/"
+    - "/content/synthetic-population_/data/transformed/df_grouper_outpatient/"
   output: "/content/synthetic-population_/data/gold/"
   test_size: 0.2
   random_state: 42
+
 
 generate:
   input: "/content/synthetic-population_/data/gold/train.csv"
