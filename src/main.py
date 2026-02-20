@@ -1,7 +1,6 @@
 import subprocess
 from datetime import datetime
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 from src.etl.etl import main as etl_main
 from src.ingestion.ingest import main as ingest_main
@@ -27,8 +26,8 @@ def extract():
     print("============================================")
 
 
-def run_cpu_stage(func, name):
-    print(f"🚀 Starting {name}")
+def run_stage(func, name):
+    print(f"\n🚀 Starting {name}")
     func()
     print(f"✅ Finished {name}")
 
@@ -38,34 +37,27 @@ def main():
     print(f"PIPELINE STARTED AT {start_time}")
 
     # 1️⃣ Extract (blocking)
-    extract()
+    # extract()  # uncomment if you want to run extraction
 
-    # 2️⃣ Parallel CPU stages
-    with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
-        futures = []
-        futures.append(executor.submit(run_cpu_stage, etl_main, "ETL"))
-        futures.append(executor.submit(run_cpu_stage, ingest_main, "INGEST"))
+    # 2️⃣ ETL (GPU-safe) — sequential
+    run_stage(etl_main, "ETL")
 
-        for f in futures:
-            f.result()  # wait
+    # 3️⃣ Ingest (CPU) — sequential or parallel
+    run_stage(ingest_main, "INGEST")
 
-    # 3️⃣ GPU stages (sequential!)
-    print("🔥 Starting GENERATE (GPU)")
-    generate_main()
+    # 4️⃣ Generate (GPU)
+    run_stage(generate_main, "GENERATE")
 
-    print("🔥 Starting TRAIN (GPU)")
-    train_main()
+    # 5️⃣ Train (GPU)
+    run_stage(train_main, "TRAIN")
 
-    # 4️⃣ Evaluation (CPU again)
-    print("📊 Starting EVALUATE")
-    evaluate_main()
+    # 6️⃣ Evaluate (CPU)
+    run_stage(evaluate_main, "EVALUATE")
 
     end_time = datetime.now()
-    print(f"PIPELINE FINISHED AT {end_time}")
+    print(f"\nPIPELINE FINISHED AT {end_time}")
     print(f"TOTAL RUNTIME: {end_time - start_time}")
 
 
 if __name__ == "__main__":
     main()
-# python -m src.main --n_samples 100000 \--epochs 10 \--num_processes $(nproc) --sample_rows 100000
-
