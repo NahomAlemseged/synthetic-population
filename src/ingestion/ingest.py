@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 # ==============================
 # Load Config
 # ==============================
-CONFIG_PATH = Path("/content/drive/MyDrive/data_THCIC/config/params.yaml")
+CONFIG_PATH = Path("/content/synthetic-population_/config/params.yaml")
 
 with open(CONFIG_PATH, "r") as f:
     params_ = yaml.safe_load(f)
@@ -52,9 +52,19 @@ class Ingestion:
             for bf, gf in zip(base_files, grouper_files):
                 print(f"\n📂 Processing {bf.name} + {gf.name}")
                 df_base = pd.read_parquet(bf)
-                df_grouper = pd.read_parquet(gf)
+                df_base = pd.read_csv(bf, dtype=str, usecols=[
+                    'RECORD_ID', 'DISCHARGE', 'TYPE_OF_ADMISSION', 'SOURCE_OF_ADMISSION',
+                    'PAT_ZIP', 'PAT_COUNTY', 'PUBLIC_HEALTH_REGION', 'PAT_STATUS',
+                    'SEX_CODE', 'RACE', 'ETHNICITY', 'ADMIT_WEEKDAY', 'LENGTH_OF_STAY',
+                    'PAT_AGE', 'FIRST_PAYMENT_SRC'
+                ])
+                df_grouper = pd.read_csv(gf, dtype=str, usecols=['RECORD_ID','APR_MDC'])
+                    # df_grouper.dropna(inplace=True)
+                print(f"...shape of grouper data :{df_grouper.shape}")
 
                 df_merged = df_base.merge(df_grouper, on="RECORD_ID", how="inner")
+                print(f"...shape of merged data :{df_merged.shape}")
+                df_merged.drop(columns=["RECORD_ID"], inplace=True)
                 print(f"Merged shape: {df_merged.shape}")
 
                 if first_file:
