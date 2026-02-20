@@ -12,12 +12,9 @@ GPU_AVAILABLE = torch.cuda.is_available()
 if GPU_AVAILABLE:
     print("🚀 GPU detected — using RAPIDS")
     import dask_cudf as dd
-    from dask_cuda import LocalCUDACluster
-    from dask.distributed import Client
 else:
-    print("💻 No GPU detected — using CPU Dask")
+    print("💻 Using CPU Dask")
     import dask.dataframe as dd
-    from dask.distributed import Client, LocalCluster
 
 
 # ==============================
@@ -26,156 +23,123 @@ else:
 
 CONFIG_PATH = Path("/content/synthetic-population_/config/params.yaml")
 
-with open(CONFIG_PATH, "r") as f:
+with open(CONFIG_PATH) as f:
     params_ = yaml.safe_load(f)
 
-input_dirs = params_["etl"]["input"]
-output_dir = Path(params_["etl"]["output"][0])
-
 
 # ==============================
-# GPU Pipeline
+# ETL Class
 # ==============================
 
-class GPUPipeline:
+class ETL:
 
     def __init__(self):
-        if GPU_AVAILABLE:
-            self.cluster = LocalCUDACluster()
-        else:
-            self.cluster = LocalCluster(
-                n_workers=min(8, os.cpu_count()),
-                threads_per_worker=2
-            )
-
-        self.client = Client(self.cluster)
-        print("✅ Dask cluster started")
+        self.input_paths = params_["etl"]["input"]
+        self.output_path = Path(params_["etl"]["output"][0])
 
     # --------------------------------------------------
-    # STEP 1: Load TXT Files on GPU
+    # EXTRACT + TRANSFORM
     # --------------------------------------------------
 
-    def load_data(self):
-        datasets = {}
+    def extract_transform(self):
 
-        for dir_path in input_dirs:
+        dfs = {}
+
+        for dir_path in self.input_paths:
             dir_path = Path(dir_path)
+
             print(f"\n📂 Scanning {dir_path}")
+
+            if not dir_path.exists():
+                print("❌ Directory does not exist")
+                continue
 
             txt_files = list(dir_path.rglob("*.txt"))
             print(f"Found {len(txt_files)} txt files")
 
+            # Robust pattern matching
             base_files = [str(p) for p in txt_files if "BASE_DATA_1" in p.name]
             grouper_files = [str(p) for p in txt_files if "GROUPER" in p.name]
 
+            # ----------------------
+            # BASE
+            # ----------------------
+
             if base_files:
+                print(f"Loading {len(base_files)} BASE files")
+
                 df_base = dd.concat(
                     [dd.read_csv(fp, sep="\t", dtype=str) for fp in base_files],
                     ignore_index=True
                 )
+
                 df_base["TYPE"] = dir_path.name
-                datasets[f"base_{dir_path.name}"] = df_base
-                print(f"✅ Loaded BASE for {dir_path.name}")
+
+                dfs[f"df_base_1_{dir_path.name}"] = df_base
+                print(f"✅ df_base_1_{dir_path.name} loaded")
+
+            else:
+                print("⚠️ No BASE files found")
+
+            # ----------------------
+            # GROUPER
+            # ----------------------
 
             if grouper_files:
+                print(f"Loading {len(grouper_files)} GROUPER files")
+
                 df_grouper = dd.concat(
                     [dd.read_csv(fp, sep="\t", dtype=str) for fp in grouper_files],
                     ignore_index=True
                 )
+
                 df_grouper["TYPE"] = dir_path.name
-                datasets[f"grouper_{dir_path.name}"] = df_grouper
-                print(f"✅ Loaded GROUPER for {dir_path.name}")
 
-        return datasets
+                dfs[f"df_grouper_{dir_path.name}"] = df_grouper
+                print(f"✅ df_grouper_{dir_path.name} loaded")
 
-    # --------------------------------------------------
-    # STEP 2: GPU Merge
-    # --------------------------------------------------
+            else:
+                print("⚠️ No GROUPER files found")
 
-    def merge_data(self, datasets):
-        merged_list = []
+        if not dfs:
+            raise ValueError("❌ No datasets extracted in ETL.")
 
-        for key in datasets:
-            if key.startswith("base_"):
-                folder = key.replace("base_", "")
-                base_df = datasets[key]
-                grouper_key = f"grouper_{folder}"
-
-                if grouper_key in datasets:
-                    print(f"\n🔗 Merging {folder}")
-                    merged = base_df.merge(
-                        datasets[grouper_key],
-                        on="RECORD_ID",
-                        how="inner"
-                    )
-                    merged_list.append(merged)
-
-        if not merged_list:
-            raise ValueError("❌ No datasets merged.")
-
-        final_df = dd.concat(merged_list)
-        print("✅ All datasets merged")
-
-        return final_df
+        return dfs
 
     # --------------------------------------------------
-    # STEP 3: Train/Test Split on GPU
+    # LOAD (SAVE CLEAN DATA)
     # --------------------------------------------------
 
-    def split_and_save(self, df):
+    def load(self, dfs):
 
-        output_dir.mkdir(parents=True, exist_ok=True)
+        self.output_path.mkdir(parents=True, exist_ok=True)
 
-        print("\n✂️ Splitting train/test")
+        for dataset_name, ddf in dfs.items():
 
-        df = df.persist()
+            out_dir = self.output_path / dataset_name
+            out_dir.mkdir(parents=True, exist_ok=True)
 
-        frac = 0.8
-        train = df.sample(frac=frac, random_state=42)
-        test = df[~df.index.isin(train.index)]
+            print(f"\n💾 Saving {dataset_name}")
 
-        train_file = output_dir / "train.csv"
-        test_file = output_dir / "test.csv"
+            # 🔥 PRODUCTION RECOMMENDATION: Save as Parquet
+            ddf.to_parquet(
+                out_dir,
+                write_index=False
+            )
 
-        train.repartition(npartitions=1).to_csv(
-            train_file,
-            index=False,
-            single_file=True
-        )
+            print(f"✅ Saved → {out_dir}")
 
-        test.repartition(npartitions=1).to_csv(
-            test_file,
-            index=False,
-            single_file=True
-        )
-
-        print(f"✅ Train saved → {train_file}")
-        print(f"✅ Test saved → {test_file}")
-
-    # --------------------------------------------------
-
-    def close(self):
-        self.client.close()
-        self.cluster.close()
-        print("✅ Cluster closed")
+        print("\n🎯 ETL COMPLETE")
 
 
 # ==============================
-# RUN PIPELINE
+# RUN
 # ==============================
 
 def main():
-    print("🚀 Starting GPU Pipeline")
-
-    pipeline = GPUPipeline()
-
-    datasets = pipeline.load_data()
-    merged_df = pipeline.merge_data(datasets)
-    pipeline.split_and_save(merged_df)
-
-    pipeline.close()
-
-    print("\n🎯 FULL GPU PIPELINE COMPLETE")
+    etl = ETL()
+    dfs = etl.extract_transform()
+    etl.load(dfs)
 
 
 if __name__ == "__main__":
