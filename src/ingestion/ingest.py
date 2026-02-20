@@ -6,68 +6,62 @@ from sklearn.model_selection import train_test_split
 # ==============================
 # Load Config
 # ==============================
-
-CONFIG_PATH = Path("/content/synthetic-population_/config/params.yaml")
+CONFIG_PATH = Path("/content/drive/MyDrive/data_THCIC/config/params.yaml")
 
 with open(CONFIG_PATH, "r") as f:
     params_ = yaml.safe_load(f)
 
-input_paths = params_["ingestion"]["input"]
+input_dir = Path(params_["ingestion"]["input_dir"])
 output_path = Path(params_["ingestion"]["output"])
-
+test_size = params_["ingestion"].get("test_size", 0.2)
+random_state = params_["ingestion"].get("random_state", 42)
 
 # ==============================
 # Ingestion Class
 # ==============================
-
 class Ingestion:
-    def __init__(self, input_paths, output_path):
-        self.input_paths = input_paths
+    def __init__(self, input_dir, output_path):
+        self.input_dir = Path(input_dir)
         self.output_path = Path(output_path)
+        self.output_path.mkdir(parents=True, exist_ok=True)
 
     def ingest_data(self):
         """
-        Merge BASE_DATA_1 and GROUPER files
+        Merge all BASE and GROUPER folders automatically
         """
         output_file = self.output_path / "final_data.csv"
-        self.output_path.mkdir(parents=True, exist_ok=True)
-
         first_file = True
 
-        for i in range(0, len(self.input_paths), 2):
-            base_dir = Path(self.input_paths[i])
-            grouper_dir = Path(self.input_paths[i + 1])
+        # Automatically find base/grouper pairs
+        base_folders = sorted(self.input_dir.glob("df_base_1_*"))
+        grouper_folders = sorted(self.input_dir.glob("df_grouper_*"))
 
-            # Match THCIC naming patterns
-            base_files = list(base_dir.rglob("*BASE_DATA_1*.txt"))
-            grouper_files = list(grouper_dir.rglob("*GROUPER*.txt"))
+        # Ensure matching datasets
+        for base_folder in base_folders:
+            name_suffix = base_folder.name.replace("df_base_1_", "")
+            matching_grouper = self.input_dir / f"df_grouper_{name_suffix}"
 
-            if not base_files or not grouper_files:
-                print(f"⚠️ Skipping pair ({base_dir}, {grouper_dir})")
+            if not matching_grouper.exists():
+                print(f"⚠️ No grouper folder found for {base_folder.name}, skipping")
                 continue
 
-            print(f"\n📂 Processing:")
-            print(f"Base files found: {len(base_files)}")
-            print(f"Grouper files found: {len(grouper_files)}")
+            # Merge all files in the folder
+            base_files = sorted(base_folder.glob("*.parquet"))
+            grouper_files = sorted(matching_grouper.glob("*.parquet"))
 
-            for bf in base_files:
-                print(f"Reading base: {bf.name}")
-                df_base = pd.read_csv(bf, sep="\t", dtype=str)
+            for bf, gf in zip(base_files, grouper_files):
+                print(f"\n📂 Processing {bf.name} + {gf.name}")
+                df_base = pd.read_parquet(bf)
+                df_grouper = pd.read_parquet(gf)
 
-                for gf in grouper_files:
-                    print(f"Reading grouper: {gf.name}")
-                    df_grouper = pd.read_csv(gf, sep="\t", dtype=str)
+                df_merged = df_base.merge(df_grouper, on="RECORD_ID", how="inner")
+                print(f"Merged shape: {df_merged.shape}")
 
-                    # Merge on RECORD_ID
-                    df_merged = df_base.merge(df_grouper, on="RECORD_ID", how="inner")
-
-                    print(f"Merged shape: {df_merged.shape}")
-
-                    if first_file:
-                        df_merged.to_csv(output_file, index=False, mode='w')
-                        first_file = False
-                    else:
-                        df_merged.to_csv(output_file, index=False, mode='a', header=False)
+                if first_file:
+                    df_merged.to_csv(output_file, index=False, mode='w')
+                    first_file = False
+                else:
+                    df_merged.to_csv(output_file, index=False, mode='a', header=False)
 
         if first_file:
             raise FileNotFoundError("❌ No data was merged. final_data.csv was not created.")
@@ -75,20 +69,15 @@ class Ingestion:
         print(f"\n✅ Data merged successfully → {output_file}")
         return output_file
 
-
     def save_splits(self, csv_file):
         """
         Split into train/test
         """
         print("\n✂️ Splitting train/test...")
-        
-        if not Path(csv_file).exists():
-            raise FileNotFoundError(f"{csv_file} does not exist.")
-
         df = pd.read_csv(csv_file)
 
         train_df, test_df = train_test_split(
-            df, test_size=0.2, random_state=42
+            df, test_size=test_size, random_state=random_state
         )
 
         train_file = self.output_path / "train.csv"
@@ -100,17 +89,14 @@ class Ingestion:
         print(f"✅ Train saved: {train_file} ({len(train_df)} rows)")
         print(f"✅ Test saved: {test_file} ({len(test_df)} rows)")
 
-
 # ==============================
 # Main
 # ==============================
-
 def main():
-    ingest = Ingestion(input_paths, output_path)
+    ingest = Ingestion(input_dir, output_path)
     final_csv = ingest.ingest_data()
     ingest.save_splits(final_csv)
     print("\n🎯 Pipeline Complete!")
-
 
 if __name__ == "__main__":
     main()
