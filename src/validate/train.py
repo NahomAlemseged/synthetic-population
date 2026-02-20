@@ -36,7 +36,6 @@ class TrainSynth:
         self.model_file = self.output_path / "model.pkl"
 
     def train_model(self):
-
         # Load dataset
         df = pd.read_csv(self.input_path, low_memory=False)
         print(f">>> Loaded {len(df)} rows")
@@ -55,6 +54,7 @@ class TrainSynth:
 
         n_classes = len(np.unique(y))
 
+        # Split data
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, stratify=y, random_state=42
         )
@@ -64,7 +64,7 @@ class TrainSynth:
         # =========================
         experiments = {}
 
-        # --- XGBoost ---
+        # --- XGBoost (GPU A100 ready) ---
         experiments["xgboost"] = {
             "pipeline": Pipeline([
                 ("model", XGBClassifier(
@@ -72,16 +72,12 @@ class TrainSynth:
                     num_class=n_classes,
                     eval_metric="mlogloss",
                     random_state=42,
-                    tree_method="gpu_hist" if GPU_AVAILABLE else "hist",
-                    gpu_id=0 if GPU_AVAILABLE else None,
+                    tree_method="gpu_hist",  # GPU acceleration
                     n_jobs=-1
                 ))
             ]),
             "params": {
-                "model__n_estimators": [200, 400],
-                # "model__max_depth": [4, 8],
-                # "model__learning_rate": [0.05, 0.1],
-                # "model__subsample": [0.8, 1.0]
+                "model__n_estimators": [200, 400]
             }
         }
 
@@ -108,7 +104,7 @@ class TrainSynth:
                     multi_class="multinomial",
                     max_iter=1000,
                     n_jobs=-1,
-                    solver="saga"  # Supports multinomial with n_jobs
+                    solver="saga"
                 ))
             ]),
             "params": {
@@ -131,8 +127,9 @@ class TrainSynth:
                     exp["params"],
                     scoring="f1_weighted",
                     cv=3,
-                    n_jobs=-1,  # Parallel CPU cores
-                    verbose=1
+                    n_jobs=-1,
+                    verbose=1,
+                    error_score='raise'  # will stop immediately if something fails
                 )
 
                 grid.fit(X_train, y_train)
